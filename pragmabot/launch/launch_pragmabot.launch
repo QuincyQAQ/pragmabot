@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="pragmabot" type="pragmabot_node.py" name="pragmabot_node" output="screen" />
+
+</launch>

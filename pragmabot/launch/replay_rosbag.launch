@@ -1,0 +1,58 @@
+<launch>
+  <!-- Enable simulated time -->
+  <param name="/use_sim_time" type="bool" value="true" />
+
+  <!-- Bag selection and playback speed controls -->
+  <arg name="bag_path" default="$(env HOME)/.ros/pragmabot/your_rosbag.bag" doc="Path to the rosbag file to replay" />
+  <arg name="rate" default="10" />
+  <arg name="start" default="0.0" />
+
+  <!-- If set to true, will save the image when clicked -->
+  <arg name="save_image" default="true" />
+  <arg name="save_folder" default="$(find pragmabot)/data/images" />
+
+  <!-- Topic names -->
+  <arg name="camera_info_topic" default="/zedxm/zed_node/rgb/camera_info" />
+  <arg name="other_camera_info_topic" default="/zedxm/zed_node/depth/camera_info" />
+
+  <arg name="throttled_rgb_topic" default="/throttled/rgb/image_rect_color/compressed" />
+  <arg name="throttled_depth_topic" default="/throttled/depth/depth_registered" />
+
+  <arg name="rgb_compressed_topic" default="/zedxm/zed_node/rgb/image_rect_color/compressed" />
+
+  <arg name="depth_topic" default="/zedxm/zed_node/depth/depth_registered" />
+  <arg name="rgb_topic" default="/zedxm/zed_node/rgb/image_rect_color" />
+
+  <arg name="image_click_topic" default="/throttled/rgb/image_rect_color/compressed_mouse_left" />
+
+
+  <!-- Play rosbag -->
+  <node pkg="rosbag" type="play" name="rosbag_play" args="--clock $(arg bag_path) -r $(arg rate) -s $(arg start) --topics /tf /tf_static $(arg throttled_depth_topic) $(arg throttled_rgb_topic) $(arg camera_info_topic)" output="screen" />
+
+  <!-- Publish the camera info also to other camera info topic -->
+  <node pkg="topic_tools" type="relay" name="relay_depth"
+      args="$(arg camera_info_topic) $(arg other_camera_info_topic)" />
+
+  <!-- Decompress RGB image -->
+  <node name="image_republisher_node" pkg="pragmabot" type="image_republisher_node.py" output="screen">
+    <remap from="input/depth"   to="$(arg throttled_depth_topic)" />
+    <remap from="input/rgb"     to="$(arg throttled_rgb_topic)" />
+    <remap from="output/depth"  to="$(arg depth_topic)" />
+    <remap from="output/rgb"    to="$(arg rgb_compressed_topic)" />
+    <remap from="image_click"   to="$(arg image_click_topic)" />
+
+    <param name="save_image" value="$(arg save_image)" />
+    <param name="save_folder" value="$(arg save_folder)" />
+  </node>
+
+  <!-- Decompress RGB image -->
+  <node name="image_decompressor_node" pkg="pragmabot" type="image_decompressor_node.py" output="screen"
+        respawn="true">
+    <remap from="input/compressed"   to="$(arg rgb_compressed_topic)" />
+    <remap from="output/image"       to="$(arg rgb_topic)" />
+  </node>
+
+  <!-- RQT Visualization -->
+  <node name="rqt_custom" pkg="rqt_gui" type="rqt_gui" args="--perspective-file $(find pragmabot)/viz/republish_image.perspective" />
+
+</launch>

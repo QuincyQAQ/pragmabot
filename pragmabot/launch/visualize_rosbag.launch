@@ -1,0 +1,42 @@
+<launch>
+  <!-- Enable simulated time -->
+  <param name="/use_sim_time" type="bool" value="true" />
+
+  <!-- Bag selection and playback speed controls -->
+  <arg name="bag_path" default="$(env HOME)/.ros/pragmabot/your_rosbag.bag" doc="Path to the rosbag file to visualize" />
+  <arg name="rate" default="5" />
+  <arg name="start" default="0.0" />
+
+  <!-- Topic names -->
+  <arg name="camera_info_topic" default="/zedxm/zed_node/rgb/camera_info" />
+  <arg name="other_camera_info_topic" default="/zedxm/zed_node/depth/camera_info" />
+  
+  <arg name="throttled_rgb_topic" default="/throttled/rgb/image_rect_color/compressed" />
+  <arg name="throttled_depth_topic" default="/throttled/depth/depth_registered" />
+
+  <arg name="rgb_compressed_topic" default="/zedxm/zed_node/rgb/image_rect_color/compressed" />
+
+  <arg name="depth_topic" default="/zedxm/zed_node/depth/depth_registered" />
+  <arg name="rgb_topic" default="/zedxm/zed_node/rgb/image_rect_color" />
+
+
+  <!-- Play rosbag -->
+  <node pkg="rosbag" type="play" name="rosbag_play" args="--clock $(arg bag_path) -r $(arg rate) -s $(arg start)
+  $(arg throttled_depth_topic):=$(arg depth_topic)
+  $(arg throttled_rgb_topic):=$(arg rgb_compressed_topic)" output="screen" />
+
+  <!-- Publish the camera info also to other camera info topic -->
+  <node pkg="topic_tools" type="relay" name="relay_depth"
+      args="$(arg camera_info_topic) $(arg other_camera_info_topic)" />
+
+  <!-- Decompress RGB image -->
+  <node name="image_decompressor_node" pkg="pragmabot" type="image_decompressor_node.py" output="screen"
+        respawn="true">
+    <remap from="input/compressed"   to="$(arg rgb_compressed_topic)" />
+    <remap from="output/image"       to="$(arg rgb_topic)" />
+  </node>
+
+  <!-- RVIZ Visualization -->
+  <node type="rviz" name="rviz_experiment" pkg="rviz" args="-d $(find pragmabot)/viz/visualize_rosbag.rviz"/>
+
+</launch>

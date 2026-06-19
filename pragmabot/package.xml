@@ -1,0 +1,25 @@
+<?xml version="1.0"?>
+<package format="2">
+    <name>pragmabot</name>
+    <version>1.0.0</version>
+    <description>PragmaBot: Learning to plan tasks by experiencing the real world</description>
+
+    <maintainer email="kaixqu@ethz.ch">Kaixian Qu</maintainer>
+    <maintainer email="guolan@ethz.ch">Guowei Lan</maintainer>
+    <maintainer email="chencha@ethz.ch">Changan Chen</maintainer>
+    <license>BSD-3-Clause</license>
+
+    <url type="website">https://pragmabot.github.io</url>
+    <url type="repository">https://github.com/leggedrobotics/pragmabot</url>
+
+    <buildtool_depend>catkin</buildtool_depend>
+
+    <depend>rospy</depend>
+    <depend>sensor_msgs</depend>
+    <depend>geometry_msgs</depend>
+    <depend>cv_bridge</depend>
+    <depend>message_filters</depend>
+    <depend>topic_tools</depend>
+    <depend>tf</depend>
+
+</package>

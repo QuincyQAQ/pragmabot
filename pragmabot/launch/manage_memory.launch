@@ -1,0 +1,5 @@
+<launch>
+
+  <node pkg="pragmabot" type="memory_manager_node.py" name="memory_manager_node" output="screen" />
+
+</launch>

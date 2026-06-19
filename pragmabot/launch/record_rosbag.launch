@@ -1,0 +1,24 @@
+<launch>
+    <!-- Throttles RGB and depth image topics to reduce data rate, then records essential topics
+    including camera info, RGB, depth, and TF transforms -->
+    <arg name="throttle_rate" default="1.0" />
+
+    <arg name="camera_info_topic" default="/zedxm/zed_node/rgb/camera_info" />
+    <arg name="rgb_topic" default="/zedxm/zed_node/rgb/image_rect_color/compressed" />
+    <arg name="depth_topic" default="/zedxm/zed_node/depth/depth_registered" />
+
+    <arg name="throttled_rgb_topic" default="/throttled/rgb/image_rect_color/compressed" />
+    <arg name="throttled_depth_topic" default="/throttled/depth/depth_registered" />
+
+    <arg name="bag_prefix" default="$(env HOME)/.ros/pragmabot" />
+
+
+    <node pkg="topic_tools" type="throttle" name="throttle_rgb_image" 
+          args="messages $(arg rgb_topic) $(arg throttle_rate) $(arg throttled_rgb_topic)" />
+
+    <node pkg="topic_tools" type="throttle" name="throttle_depth" 
+          args="messages $(arg depth_topic) $(arg throttle_rate) $(arg throttled_depth_topic)" />
+
+    <node pkg="rosbag" type="record" name="rosbag_record" output="screen"
+          args="/tf /tf_static $(arg camera_info_topic) $(arg throttled_rgb_topic) $(arg throttled_depth_topic) -o $(arg bag_prefix)" />
+</launch>

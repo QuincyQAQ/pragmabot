@@ -1,3 +1,54 @@
+# Camera Runner Lite
+
+Standalone script that runs the full PragmaBot 7-step pipeline with a local camera (no ROS required).
+
+## Usage
+
+```bash
+# Interactive mode (same as original)
+OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py
+
+# Single task, still interactive at each step
+OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball"
+
+# Fully autonomous (skip all prompts)
+OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball" --auto
+
+# Limit iterations (default 10)
+OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball" --auto --max-steps 3
+```
+
+## Pipeline
+
+```
+Step 1: Scene  Describe scene ──┐
+Step 2: Memory Retrieve LTM     │ One-shot
+Step 3: Plan   Choose action ───┘
+                                ↓
+┌─ Loop / Iteration ───────────────────────────┐
+│                                               │
+│  Step 4: Execute  Perform action              │
+│  Step 5: Detect   Compare before/after        │
+│  Step 6: STM      Record result               │
+│                                               │
+│  Not done → back to Step 3 (re-plan)          │
+│  Done     → break, go to Step 7               │
+└───────────────────────────────────────────────┘
+
+Step 7: Summary  Distill STM → LTM
+```
+
+### Changes from original `camera_runner.py`
+
+- Unifies Scene/Plan/Detect/Summary models under single `gpt-5.4-mini`
+- Image resize to 384px for faster API calls
+- Camera auto-fallback (test image if no camera)
+- Passive action short-circuit (skip loop when Plan says "observe")
+- `--task`, `--auto`, `--max-steps` CLI arguments
+- Total elapsed time per task
+- Full text output (no truncation)
+
+
 # PragmaBot
 
 **A Pragmatist Robot: Learning to Plan Tasks by Experiencing the Real World**

@@ -5,26 +5,31 @@ Standalone script that runs the full PragmaBot 7-step pipeline with a local came
 ## Usage
 
 ```bash
-# Interactive mode (same as original)
+# ---- 交互模式：手动输入任务，手动确认每一步 ----
 OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py
 
-# Single task, still interactive at each step
-OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball"
+# ---- 直拍模式：只看图+规划，不执行不重试（适合静态场景理解） ----
+OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball" --one-shot
 
-# Fully autonomous (skip all prompts)
+# ---- 模拟模式：自动执行 2 步重试（适合无真实机器人的流程测试） ----
+OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball" --sim
+
+# ---- 全自动模式：自动执行直到完成/失败（有真实机器人时用） ----
 OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball" --auto
 
-# Limit iterations (default 10)
-OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball" --auto --max-steps 3
+# ---- 自定义重试次数 ----
+OPENAI_API_KEY="sk-bYkj2zaI3qd8fISMOGe3BOQLBfyOmowH9YUQUnNsi7zUNr5m" python camera_runner_lite.py --task "pick up the orange ball" --auto --max-steps 5
 ```
 
 ## Pipeline
 
+### Logical flow (original 7-step model)
+
 ```
-Step 1: Scene  Describe scene ──┐
-Step 2: Memory Retrieve LTM     │ One-shot
-Step 3: Plan   Choose action ───┘
-                                ↓
+Step 1: Scene   Describe scene ──┐
+Step 2: Memory  Retrieve LTM     │ One-shot
+Step 3: Plan    Choose action ───┘
+                        ↓
 ┌─ Loop / Iteration ───────────────────────────┐
 │                                               │
 │  Step 4: Execute  Perform action              │
@@ -38,15 +43,41 @@ Step 3: Plan   Choose action ───┘
 Step 7: Summary  Distill STM → LTM
 ```
 
+### Data flow (actual execution — optimized)
+
+```
+Step 1: Memory    task text → embedding → LTM retrieval  (no scene needed)
+                  matches "pick ball" ↔ past "pick apple" etc. semantically
+
+Step 2: Scene+Plan  one API call: image + task + LTM → scene + action
+                    Plan output includes scene_description — no separate Scene call
+                    Same image encoded once, saves ~4s
+
+Step 3: Execute    perform or simulate the action
+
+Step 4: Detect     compare before/after → success / failure
+
+Step 5: STM        record result → loop 2-5 if not done
+
+Step 6: Summary    distill STM → LTM, clear API cache
+```
+
+**Why Scene+Plan merge:** Both need the same image. Plan's output (`NextBestAction`) already contains `scene_description`. Sending the image twice wastes one full VLM encoding round-trip.
+
+**Why Memory before Scene+Plan:** LTM is searched by task semantics, not spatial description. "pick up the orange ball" matches past experiences about picking balls regardless of table layout.
+
 ### Changes from original `camera_runner.py`
 
-- Unifies Scene/Plan/Detect/Summary models under single `gpt-5.4-mini`
+- **Scene+Plan merged** — one API call instead of two, same image encoded once
+- Memory runs first with task text, feeds LTM into the merged Scene+Plan call
+- All models under single `gpt-5.4-mini`
 - Image resize to 384px for faster API calls
 - Camera auto-fallback (test image if no camera)
 - Passive action short-circuit (skip loop when Plan says "observe")
 - `--task`, `--auto`, `--max-steps` CLI arguments
 - Total elapsed time per task
 - Full text output (no truncation)
+- VLM response cache (survives Ctrl+C, auto-cleared on completion)
 
 
 # PragmaBot
